@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using M220N.Models;
@@ -141,7 +142,40 @@ namespace M220N.Repositories
                 // //   .WithReadConcern(...)
                 // //   .Aggregate()
                 // //   .Group(...)
-                // //   .Sort(...).Limt(...).Project(...).ToListAsync()
+                // //   .Sort(...).Limit(...).Project(...).ToListAsync()
+
+                var projectionDefinition = Builders<ReportProjection>.Projection
+                    //.Include(doc => doc.Id)
+                    .Include(doc => doc.Count);
+
+                result = await _commentsCollection
+                    .WithReadConcern(ReadConcern.Majority)
+                    .Aggregate()
+                    .Group(
+                        key => key.Email,
+                        group => new ReportProjection()
+                        {
+                            Id = group.Key,
+                            Count = group.Count()
+                        }
+                        )
+                    .Sort(Builders<ReportProjection>.Sort.Descending(p => p.Count))
+                    .Limit(20)
+                    .Project<ReportProjection>(projectionDefinition)
+                    .ToListAsync();
+
+                //result = await _commentsCollection
+                //    .WithReadConcern(ReadConcern.Majority)
+                //    .Aggregate()
+                //    .Group(new BsonDocument
+                //    {
+                //        {"_id", "$email"},
+                //        {"count", new BsonDocument("$sum", 1)}
+                //    })
+                //    .Sort(Builders<BsonDocument>.Sort.Descending("count"))
+                //    .Limit(20)
+                //    .Project<ReportProjection>(Builders<BsonDocument>.Projection.Include("email").Include("count"))
+                //    .ToListAsync();
 
                 return new TopCommentsProjection(result);
             }

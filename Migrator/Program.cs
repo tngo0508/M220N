@@ -18,7 +18,7 @@ namespace Migrator
         static IMongoCollection<Movie> _moviesCollection;
 
         // TODO: Update this connection string as needed.
-        static string mongoConnectionString = "";
+        static string mongoConnectionString = "mongodb+srv://admin:admin@mflix.rzkph.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
         
         static async Task Main(string[] args)
         {
@@ -37,6 +37,18 @@ namespace Migrator
                 //
                 // // bulkWriteDatesResult = await _moviesCollection.BulkWriteAsync(...
 
+                List<ReplaceOneModel<Movie>> models = new List<ReplaceOneModel<Movie>>();
+
+                foreach (var datePipelineResult in datePipelineResults)
+                {
+                    var model = new ReplaceOneModel<Movie>(Builders<Movie>.Filter.Where(x => x.Id == datePipelineResult.Id), datePipelineResult);
+
+                    models.Add(model);
+                }
+
+                bulkWriteDatesResult =
+                    await _moviesCollection.BulkWriteAsync(models, new BulkWriteOptions() {IsOrdered = false});
+
                 Console.WriteLine($"{bulkWriteDatesResult.ProcessedRequests.Count} records updated.");
             }
 
@@ -52,8 +64,23 @@ namespace Migrator
                 //
                 // // bulkWriteRatingsResult = await _moviesCollection.BulkWriteAsync(...
 
+                List<ReplaceOneModel<Movie>> models = new List<ReplaceOneModel<Movie>>();
+
+                foreach (var ratingPipelineResult in ratingPipelineResults)
+                {
+                    var model = new ReplaceOneModel<Movie>(
+                        Builders<Movie>.Filter.Where(x => x.Id == ratingPipelineResult.Id), ratingPipelineResult);
+
+                    models.Add(model);
+
+                }
+
+                bulkWriteRatingsResult =
+                    await _moviesCollection.BulkWriteAsync(models, new BulkWriteOptions() {IsOrdered = false});
+
                 Console.WriteLine($"{bulkWriteRatingsResult.ProcessedRequests.Count} records updated.");
             }
+
 
             Console.WriteLine();
             Console.WriteLine("Checking the data conversions...");
